@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS 1 to ROS 2 Migration Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #e9ecef;
+            font-weight: bold;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            background-color: #f8f9fa;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .code-comparison {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .code-block {
+            flex: 1;
+            margin: 0 10px;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .code-block h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        .ros1 {
+            border-left: 4px solid #e74c3c;
+        }
+        .ros2 {
+            border-left: 4px solid #2ecc71;
+        }
+        .note {
+            background-color: #e7f5fe;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .quick-ref {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .quick-ref th, .quick-ref td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .quick-ref th {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .quick-ref tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .step {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #6c757d;
+        }
+        .step-number {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ROS 1 to ROS 2 Migration Guide</h1>
+        <p>Comprehensive guide to migrating your ROS 1 packages to ROS 2</p>
+    </header>
+
+    <div class="tabs">
+        <div class="tab active" onclick="openTab(event, 'overview')">Overview</div>
+        <div class="tab" onclick="openTab(event, 'package')">Package Configuration</div>
+        <div class="tab" onclick="openTab(event, 'build')">Build System</div>
+        <div class="tab" onclick="openTab(event, 'code')">Source Code</div>
+        <div class="tab" onclick="openTab(event, 'parameters')">Parameters</div>
+        <div class="tab" onclick="openTab(event, 'launch')">Launch Files</div>
+        <div class="tab" onclick="openTab(event, 'example')">Full Example</div>
+    </div>
+
+    <div id="overview" class="tab-content active">
+        <h2>Migration Overview</h2>
+        <p>This guide helps you migrate ROS 1 packages to ROS 2. There are two approaches:</p>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Source Code Migration:</strong> Keep most of the source code similar, maintaining parallel branches (e.g., pluginlib)
+        </div>
+        
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Functional Reimplementation:</strong> Rewrite the code with similar functionality but different implementation (e.g., roscpp → rclcpp)
+        </div>
+        
+        <div class="warning">
+            <h3>Prerequisites</h3>
+            <p>Before migrating, ensure all your package's dependencies are available in ROS 2.</p>
+        </div>
+    </div>
+
+    <div id="package" class="tab-content">
+        <h2>Package Configuration Changes</h2>
+        
+        <h3>Package Manifest (package.xml)</h3>
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1</h3>
+                <pre>&lt;package&gt;
+  &lt;name&gt;talker&lt;/name&gt;
+  &lt;version&gt;0.0.0&lt;/version&gt;
+  &lt;description&gt;talker&lt;/description&gt;
+  &lt;maintainer email="user@example.com"&gt;Your Name&lt;/maintainer&gt;
+  &lt;license&gt;Apache 2.0&lt;/license&gt;
+  &lt;buildtool_depend&gt;catkin&lt;/buildtool_depend&gt;
+  &lt;build_depend&gt;roscpp&lt;/build_depend&gt;
+  &lt;build_depend&gt;std_msgs&lt;/build_depend&gt;
+  &lt;run_depend&gt;roscpp&lt;/run_depend&gt;
+  &lt;run_depend&gt;std_msgs&lt;/run_depend&gt;
+&lt;/package&gt;</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2</h3>
+                <pre>&lt;package format="2"&gt;
+  &lt;name&gt;talker&lt;/name&gt;
+  &lt;version&gt;0.0.0&lt;/version&gt;
+  &lt;description&gt;talker&lt;/description&gt;
+  &lt;maintainer email="user@example.com"&gt;Your Name&lt;/maintainer&gt;
+  &lt;license&gt;Apache License 2.0&lt;/license&gt;
+  &lt;buildtool_depend&gt;ament_cmake&lt;/buildtool_depend&gt;
+  &lt;depend&gt;rclcpp&lt;/depend&gt;
+  &lt;depend&gt;std_msgs&lt;/depend&gt;
+  &lt;export&gt;
+    &lt;build_type&gt;ament_cmake&lt;/build_type&gt;
+  &lt;/export&gt;
+&lt;/package&gt;</pre>
+            </div>
+        </div>
+        
+        <div class="note">
+            <h3>Key Changes:</h3>
+            <ul>
+                <li>Add <code>format="2"</code> to package tag</li>
+                <li>Change <code>catkin</code> to <code>ament_cmake</code></li>
+                <li>Replace <code>roscpp</code> with <code>rclcpp</code></li>
+                <li>Use <code>depend</code> instead of separate build/run dependencies</li>
+                <li>Add <code>export/build_type</code> section</li>
+            </ul>
+        </div>
+        
+        <h3>Metapackages</h3>
+        <p>ROS 2 doesn't have a special metapackage type. Simply remove the <code>&lt;metapackage /&gt;</code> tag.</p>
+    </div>
+
+    <div id="build" class="tab-content">
+        <h2>Build System Changes</h2>
+        
+        <h3>CMakeLists.txt</h3>
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1</h3>
+                <pre>cmake_minimum_required(VERSION 2.8.3)
+project(talker)
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs)
+catkin_package()
+include_directories(${catkin_INCLUDE_DIRS})
+add_executable(talker talker.cpp)
+target_link_libraries(talker ${catkin_LIBRARIES})
+install(TARGETS talker
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2</h3>
+                <pre>cmake_minimum_required(VERSION 3.5)
+project(talker)
+
+# Enable C++14
+set(CMAKE_CXX_STANDARD 14)
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+
+include_directories(include)
+add_executable(talker talker.cpp)
+ament_target_dependencies(talker
+  rclcpp
+  std_msgs)
+
+install(TARGETS talker
+  DESTINATION lib/${PROJECT_NAME})
+
+ament_package()</pre>
+            </div>
+        </div>
+        
+        <div class="note">
+            <h3>Key Changes:</h3>
+            <ul>
+                <li>Require CMake 3.5+</li>
+                <li>Set C++14 standard</li>
+                <li>Use <code>ament_cmake</code> instead of <code>catkin</code></li>
+                <li>Find each package separately</li>
+                <li>Use <code>ament_target_dependencies</code> for linking</li>
+                <li>Install to <code>lib/${PROJECT_NAME}</code></li>
+                <li>Call <code>ament_package()</code> at the end</li>
+            </ul>
+        </div>
+        
+        <h3>Build Tools</h3>
+        <p>Replace <code>catkin_make</code> with <code>colcon build</code>:</p>
+        <div class="code-block">
+            <pre># ROS 1
+catkin_make install
+
+# ROS 2
+colcon build</pre>
+        </div>
+    </div>
+
+    <div id="code" class="tab-content">
+        <h2>Source Code Migration</h2>
+        
+        <h3>Includes</h3>
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1</h3>
+                <pre>#include "ros/ros.h"
+#include "std_msgs/String.h"</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2</h3>
+                <pre>#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"</pre>
+            </div>
+        </div>
+        
+        <h3>Node Initialization</h3>
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1</h3>
+                <pre>ros::init(argc, argv, "talker");
+ros::NodeHandle n;</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2</h3>
+                <pre>rclcpp::init(argc, argv);
+auto node = rclcpp::Node::make_shared("talker");</pre>
+            </div>
+        </div>
+        
+        <h3>Publisher Creation</h3>
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1</h3>
+                <pre>ros::Publisher chatter_pub = 
+  n.advertise&lt;std_msgs::String&gt;("chatter", 1000);</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2</h3>
+                <pre>auto chatter_pub = node-&gt;create_publisher&lt;std_msgs::msg::String&gt;(
+  "chatter", 1000);</pre>
+            </div>
+        </div>
+        
+        <h3>Message Definition</h3>
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1</h3>
+                <pre>std_msgs::String msg;</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2</h3>
+                <pre>std_msgs::msg::String msg;</pre>
+            </div>
+        </div>
+        
+        <h3>Logging</h3>
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1</h3>
+                <pre>ROS_INFO("%s", msg.data.c_str());</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2</h3>
+                <pre>RCLCPP_INFO(node-&gt;get_logger(), "%s", msg.data.c_str());</pre>
+            </div>
+        </div>
+        
+        <h3>Main Loop</h3>
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1</h3>
+                <pre>while (ros::ok()) {
+  ros::spinOnce();
+}</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2</h3>
+                <pre>while (rclcpp::ok()) {
+  rclcpp::spin_some(node);
+}</pre>
+            </div>
+        </div>
+    </div>
+
+    <div id="parameters" class="tab-content">
+        <h2>Parameters</h2>
+        
+        <p>In ROS 2, parameters are associated per node rather than with a central server.</p>
+        
+        <h3>Quick Reference</h3>
+        <table class="quick-ref">
+            <tr>
+                <th>Feature</th>
+                <th>ROS 1</th>
+                <th>ROS 2</th>
+            </tr>
+            <tr>
+                <td>Remapping</td>
+                <td>foo:=bar</td>
+                <td>-r foo:=bar</td>
+            </tr>
+            <tr>
+                <td>Parameters</td>
+                <td>_foo:=bar</td>
+                <td>-p foo:=bar</td>
+            </tr>
+            <tr>
+                <td>Node name</td>
+                <td>__name:=foo</td>
+                <td>-r __node:=foo</td>
+            </tr>
+            <tr>
+                <td>Namespace</td>
+                <td>__ns:=foo</td>
+                <td>-r __ns:=foo</td>
+            </tr>
+        </table>
+        
+        <div class="note">
+            <h3>Important Notes:</h3>
+            <ul>
+                <li>ROS 2 arguments should be scoped with <code>--ros-args</code></li>
+                <li>No ROS 2 equivalent for <code>__log</code>, <code>__ip</code>, <code>__hostname</code>, <code>__master</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="launch" class="tab-content">
+        <h2>Launch Files</h2>
+        
+        <p>ROS 2 supports Python scripts for launch files (recommended) as well as XML and YAML.</p>
+        
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1 XML</h3>
+                <pre>&lt;launch&gt;
+  &lt;node pkg="talker" 
+        type="talker" 
+        name="talker" 
+        output="screen"/&gt;
+&lt;/launch&gt;</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2 Python</h3>
+                <pre>from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package='talker',
+            executable='talker',
+            name='talker',
+            output='screen'
+        )
+    ])</pre>
+            </div>
+        </div>
+        
+        <div class="note">
+            <h3>Migration Tools:</h3>
+            <p>Consider using the <a href="https://github.com/aws-robotics/ros2-launch-file-migrator" target="_blank">ROS 2 Launch File Migrator</a> to convert XML launch files to Python.</p>
+        </div>
+    </div>
+
+    <div id="example" class="tab-content">
+        <h2>Complete Example: ROS 1 to ROS 2 Talker</h2>
+        
+        <div class="code-comparison">
+            <div class="code-block ros1">
+                <h3>ROS 1 Talker</h3>
+                <pre>#include &lt;sstream&gt;
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+
+int main(int argc, char **argv) {
+  ros::init(argc, argv, "talker");
+  ros::NodeHandle n;
+  ros::Publisher chatter_pub = 
+    n.advertise&lt;std_msgs::String&gt;("chatter", 1000);
+  ros::Rate loop_rate(10);
+  
+  int count = 0;
+  std_msgs::String msg;
+  
+  while (ros::ok()) {
+    std::stringstream ss;
+    ss &lt;&lt; "hello world " &lt;&lt; count++;
+    msg.data = ss.str();
+    ROS_INFO("%s", msg.data.c_str());
+    chatter_pub.publish(msg);
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
+  return 0;
+}</pre>
+            </div>
+            <div class="code-block ros2">
+                <h3>ROS 2 Talker</h3>
+                <pre>#include &lt;sstream&gt;
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+
+int main(int argc, char **argv) {
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("talker");
+  auto chatter_pub = node-&gt;create_publisher&lt;std_msgs::msg::String&gt;(
+    "chatter", 1000);
+  rclcpp::Rate loop_rate(10);
+  
+  int count = 0;
+  std_msgs::msg::String msg;
+  
+  while (rclcpp::ok()) {
+    std::stringstream ss;
+    ss &lt;&lt; "hello world " &lt;&lt; count++;
+    msg.data = ss.str();
+    RCLCPP_INFO(node-&gt;get_logger(), "%s", msg.data.c_str());
+    chatter_pub-&gt;publish(msg);
+    rclcpp::spin_some(node);
+    loop_rate.sleep();
+  }
+  return 0;
+}</pre>
+            </div>
+        </div>
+        
+        <div class="note">
+            <h3>Additional Resources:</h3>
+            <ul>
+                <li><a href="https://github.com/awslabs/ros2-migration-tools" target="_blank">AWS ROS 2 Migration Tools</a></li>
+                <li><a href="https://index.ros.org/doc/ros2/" target="_blank">ROS 2 Documentation</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            
+            // Hide all tab content
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+            
+            // Remove active class from all tabs
+            tablinks = document.getElementsByClassName("tab");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            
+            // Show the current tab and add active class
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+    </script>
+</body>
+</html>
